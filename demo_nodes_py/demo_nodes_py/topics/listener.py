@@ -19,7 +19,7 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 
 from std_msgs.msg import String
-
+import objgraph
 
 class Listener(Node):
 
@@ -28,6 +28,7 @@ class Listener(Node):
         self.sub = self.create_subscription(String, 'chatter', self.chatter_callback, 10)
 
     def chatter_callback(self, msg):
+        objgraph.show_growth()
         self.get_logger().info('I heard: [%s]' % msg.data)
 
 

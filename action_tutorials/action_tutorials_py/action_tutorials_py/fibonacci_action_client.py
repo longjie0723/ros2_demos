@@ -54,7 +54,7 @@ class FibonacciActionClient(Node):
     def get_result_callback(self, future):
         result = future.result().result
         self.get_logger().info('Result: {0}'.format(result.sequence))
-        rclpy.shutdown()
+        # rclpy.shutdown()
 
     def feedback_callback(self, feedback_msg):
         feedback = feedback_msg.feedback
@@ -66,9 +66,9 @@ def main(args=None):
 
     action_client = FibonacciActionClient()
 
-    action_client.send_goal(10)
-
-    rclpy.spin(action_client)
+    while True:
+        action_client.send_goal(10)
+        rclpy.spin_until_future_complete(action_client, action_client._send_goal_future)
 
 
 if __name__ == '__main__':

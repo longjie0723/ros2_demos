@@ -20,7 +20,7 @@ from action_tutorials_interfaces.action import Fibonacci
 import rclpy
 from rclpy.action import ActionServer
 from rclpy.node import Node
-
+import objgraph
 
 class FibonacciActionServer(Node):
 
@@ -33,6 +33,7 @@ class FibonacciActionServer(Node):
             self.execute_callback)
 
     def execute_callback(self, goal_handle):
+        objgraph.show_growth()
         self.get_logger().info('Executing goal...')
 
         feedback_msg = Fibonacci.Feedback()
@@ -43,7 +44,7 @@ class FibonacciActionServer(Node):
                 feedback_msg.partial_sequence[i] + feedback_msg.partial_sequence[i-1])
             self.get_logger().info('Feedback: {0}'.format(feedback_msg.partial_sequence))
             goal_handle.publish_feedback(feedback_msg)
-            time.sleep(1)
+            #time.sleep(1)
 
         goal_handle.succeed()
 

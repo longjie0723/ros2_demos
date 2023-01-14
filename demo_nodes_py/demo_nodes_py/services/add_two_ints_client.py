@@ -28,12 +28,14 @@ def main(args=None):
     req = AddTwoInts.Request()
     req.a = 2
     req.b = 3
-    future = cli.call_async(req)
-    rclpy.spin_until_future_complete(node, future)
-    if future.result() is not None:
-        node.get_logger().info('Result of add_two_ints: %d' % future.result().sum)
-    else:
-        node.get_logger().error('Exception while calling service: %r' % future.exception())
+
+    while True:
+        future = cli.call_async(req)
+        rclpy.spin_until_future_complete(node, future)
+        if future.result() is not None:
+            node.get_logger().info('Result of add_two_ints: %d' % future.result().sum)
+        else:
+            node.get_logger().error('Exception while calling service: %r' % future.exception())
 
     node.destroy_node()
     rclpy.try_shutdown()
