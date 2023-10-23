@@ -18,13 +18,15 @@ from action_tutorials_interfaces.action import Fibonacci
 import rclpy
 from rclpy.action import ActionClient
 from rclpy.node import Node
+from objgraph import show_growth
 
 
 class FibonacciActionClient(Node):
 
-    def __init__(self):
-        super().__init__('fibonacci_action_client')
-        self._action_client = ActionClient(self, Fibonacci, 'fibonacci')
+    def __init__(self, name):
+        super().__init__(name)
+        self.callback_group = rclpy.callback_groups.ReentrantCallbackGroup()
+        self._action_client = ActionClient(self, Fibonacci, 'fibonacci', callback_group=self.callback_group)
 
     def send_goal(self, order):
         goal_msg = Fibonacci.Goal()
@@ -38,6 +40,8 @@ class FibonacciActionClient(Node):
 
         self._send_goal_future.add_done_callback(self.goal_response_callback)
 
+        show_growth()
+
     def goal_response_callback(self, future):
         goal_handle = future.result()
 
@@ -45,7 +49,7 @@ class FibonacciActionClient(Node):
             self.get_logger().info('Goal rejected :(')
             return
 
-        self.get_logger().info('Goal accepted :)')
+        # self.get_logger().info('Goal accepted :)')
 
         self._get_result_future = goal_handle.get_result_async()
 
@@ -54,21 +58,26 @@ class FibonacciActionClient(Node):
     def get_result_callback(self, future):
         result = future.result().result
         self.get_logger().info('Result: {0}'.format(result.sequence))
-        rclpy.shutdown()
+        # rclpy.shutdown()
 
     def feedback_callback(self, feedback_msg):
         feedback = feedback_msg.feedback
-        self.get_logger().info('Received feedback: {0}'.format(feedback.partial_sequence))
+        # self.get_logger().info('Received feedback: {0}'.format(feedback.partial_sequence))
 
 
 def main(args=None):
     rclpy.init(args=args)
 
-    action_client = FibonacciActionClient()
+    action_client_num = 16
+    action_clients = [FibonacciActionClient('fibonacci_{}'.format(i)) for i in range(action_client_num)]
 
-    action_client.send_goal(10)
+    for action_client in action_clients:
+        action_client.create_timer(1.0, lambda: action_client.send_goal(3), callback_group=action_client.callback_group)
 
-    rclpy.spin(action_client)
+    executor = rclpy.executors.MultiThreadedExecutor()
+    for action_client in action_clients:
+        executor.add_node(action_client)
+    executor.spin()
 
 
 if __name__ == '__main__':
