@@ -27,56 +27,68 @@ class FibonacciActionClient(Node):
         super().__init__(name)
         self.callback_group = rclpy.callback_groups.ReentrantCallbackGroup()
         self._action_client = ActionClient(self, Fibonacci, 'fibonacci', callback_group=self.callback_group)
+        self.rate = self.create_rate(5)
 
-    def send_goal(self, order):
+    async def call_async(self, order):
         goal_msg = Fibonacci.Goal()
         goal_msg.order = order
 
-        self._action_client.wait_for_server()
+        # self._action_client.wait_for_server()
 
-        self._send_goal_future = self._action_client.send_goal_async(
-            goal_msg,
-            feedback_callback=self.feedback_callback)
+        goal_future = self._action_client.send_goal_async(goal_msg)
 
-        self._send_goal_future.add_done_callback(self.goal_response_callback)
+        await goal_future
 
-        show_growth()
-
-    def goal_response_callback(self, future):
-        goal_handle = future.result()
+        if goal_future is None:
+            self.get_logger().info('send goal fail')
+            return
+        
+        goal_handle = goal_future.result()
 
         if not goal_handle.accepted:
             self.get_logger().info('Goal rejected :(')
             return
 
-        # self.get_logger().info('Goal accepted :)')
+        result_future = goal_handle.get_result_async()
+        await result_future
 
-        self._get_result_future = goal_handle.get_result_async()
+        if result_future is None:
+            self.get_logger().info('get result fail')
+            return
+    
+        result = result_future.result().result
+        # self.get_logger().info('Result: {0}'.format(result.sequence))
 
-        self._get_result_future.add_done_callback(self.get_result_callback)
+    async def timer_callback(self):
+        start = self.get_clock().now()
+        await self.call_async(3)
+        end = self.get_clock().now()
+        self.get_logger().info('timer: time: {0} s'.format((end - start).nanoseconds / 1e9))
+        show_growth()
 
-    def get_result_callback(self, future):
-        result = future.result().result
-        self.get_logger().info('Result: {0}'.format(result.sequence))
-        # rclpy.shutdown()
+    async def run(self):
+        while rclpy.ok():
+            start = self.get_clock().now()
+            await self.call_async(3)
+            end = self.get_clock().now()
+            self.get_logger().info('task: time: {0} s'.format((end - start).nanoseconds / 1e9))
 
-    def feedback_callback(self, feedback_msg):
-        feedback = feedback_msg.feedback
-        # self.get_logger().info('Received feedback: {0}'.format(feedback.partial_sequence))
-
+            show_growth()
+            self.rate.sleep()
 
 def main(args=None):
     rclpy.init(args=args)
 
-    action_client_num = 16
+    action_client_num = 1
     action_clients = [FibonacciActionClient('fibonacci_{}'.format(i)) for i in range(action_client_num)]
 
     for action_client in action_clients:
-        action_client.create_timer(1.0, lambda: action_client.send_goal(3), callback_group=action_client.callback_group)
+        action_client.create_timer(0.3, action_client.timer_callback, callback_group=action_client.callback_group)
 
     executor = rclpy.executors.MultiThreadedExecutor()
     for action_client in action_clients:
         executor.add_node(action_client)
+        executor.create_task(action_client.run)
     executor.spin()
 
 
