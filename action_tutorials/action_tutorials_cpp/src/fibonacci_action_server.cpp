@@ -109,7 +109,7 @@ private:
       goal_handle->publish_feedback(feedback);
       RCLCPP_INFO(this->get_logger(), "Publish feedback");
 
-      loop_rate.sleep();
+      //loop_rate.sleep();
     }
 
     // Check if goal is done
