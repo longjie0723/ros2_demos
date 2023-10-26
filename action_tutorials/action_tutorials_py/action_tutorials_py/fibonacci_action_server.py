@@ -30,7 +30,7 @@ class FibonacciActionServer(Node):
             self,
             Fibonacci,
             'fibonacci',
-            self.execute_callback)
+            self.execute_callback, result_timeout=1.0)
 
     def execute_callback(self, goal_handle):
         self.get_logger().info('Executing goal...')
@@ -43,7 +43,7 @@ class FibonacciActionServer(Node):
                 feedback_msg.partial_sequence[i] + feedback_msg.partial_sequence[i-1])
             self.get_logger().info('Feedback: {0}'.format(feedback_msg.partial_sequence))
             goal_handle.publish_feedback(feedback_msg)
-            time.sleep(1)
+            #time.sleep(1)
 
         goal_handle.succeed()
 
